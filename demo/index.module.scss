@@ -12,7 +12,7 @@ html {
 }
 
 .tooltip {
-  padding: 0;
+  padding: 10px;
   button {
     padding: 0.3125rem 0.5625rem;
     appearance: none;
@@ -30,6 +30,10 @@ html {
     .icon {
       filter: invert(100%);
     }
+  }
+
+  .deleteButton {
+    right: 0;
   }
 }
 

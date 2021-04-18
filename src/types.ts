@@ -1,4 +1,5 @@
 export type OnChangeCallback = (
+  eventId: string,
   newDateRange: DateRange | undefined,
   rangeIndex: number,
 ) => void;
@@ -16,9 +17,37 @@ export type EventRootProps = {
   isActive: boolean;
   disabled?: boolean;
   handleDelete(): void;
+  calendarEvent: CalendarEvent;
 };
 
-export type ScheduleType = DateRange[];
+export interface CalendarCustomizations {
+  dragPrecision?: number;
+  visualGridPrecision?: number;
+  clickPrecision?: number;
+  timeframe?: string; // 0, 1 (defaults to 1 - monday)
+  weekStart?: number; // 0, 1 (defaults to 1 - monday)
+  hourStart?: number;
+  hourEnd?: number;
+}
+
+export interface CalendarEvent {
+  calendarId?: string;
+  id?: string;
+  startTime?: Date | string;
+  endTime?: Date | string;
+
+  // Extra
+  htmlLink?: string;
+  summary?: string;
+  description?: string;
+
+  // Range
+  ranges?: DateRange;
+}
+
+export interface CalendarEventCache {
+  [key: string]: CalendarEvent;
+}
 
 export type CellInfo = {
   spanX: number;

@@ -6,6 +6,18 @@ import range from 'lodash/range';
 import { CellInfo, DateRange } from '../types';
 import { getSpan } from './getSpan';
 
+/**
+ * Changes a date range into a cell format with X, Y coordinates
+ * Example:
+ * {
+ *  endX: 4
+    endY: 94.4
+    spanX: 1
+    spanY: 2
+    startX: 4
+    startY: 95.4
+ * }
+ */
 export const createMapDateRangeToCells = ({
   toX = (x: number) => x,
   toY,
@@ -19,6 +31,7 @@ export const createMapDateRangeToCells = ({
   originDate: Date;
 }) => ([start, end]: DateRange): CellInfo[] => {
   const originOfThisDay = startOfDay(start);
+
   const _startX = toX(differenceInDays(start, originDate));
   const _startY = toY(differenceInMinutes(start, originOfThisDay));
   const _endX = toX(differenceInDays(end, originDate));

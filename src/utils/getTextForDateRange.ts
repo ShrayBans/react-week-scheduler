@@ -48,11 +48,13 @@ export const getFormattedComponentsForDateRange = ({
   template2,
   includeDayIfSame = true,
 }: Options) => {
+  // console.log('dateRange', dateRange);
+  if (!dateRange) return [];
   const start = dateRange[0];
   const end = dateRange[dateRange.length - 1];
 
   if (isSameDay(start, end) && !template) {
-    const [firstM, secondM] = dropSame(dateRange, 'a', true, locale);
+    const [firstM, secondM] = dropSame(dateRange, 'a', false, locale);
     const day = includeDayIfSame ? `${format(start, 'ddd', { locale })} ` : '';
     return [
       `${day}${formatHour(start, {
@@ -69,5 +71,6 @@ export const getFormattedComponentsForDateRange = ({
 };
 
 export const getTextForDateRange = (options: Options) => {
+  // console.log('options', options);
   return getFormattedComponentsForDateRange(options).join(' – ');
 };

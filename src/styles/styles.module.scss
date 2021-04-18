@@ -311,6 +311,9 @@
 
 .range-boxes {
   .event-content {
+    overflow: hidden;
+    white-space: nowrap;
+
     padding: 5px 10px;
     font-weight: bold;
 
@@ -334,6 +337,12 @@
 
   .end {
     display: inline;
+  }
+
+  .event-name {
+    font-weight: 0;
+    color: lightgray;
+    padding-right: 5px;
   }
 }
 

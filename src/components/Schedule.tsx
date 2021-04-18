@@ -1,11 +1,11 @@
 import React from 'react';
 import {
+  CalendarEvent,
   CellInfo,
   ClassNames,
   DateRange,
   Grid,
   OnChangeCallback,
-  ScheduleType,
 } from '../types';
 import { RangeBox } from './RangeBox';
 
@@ -19,7 +19,12 @@ export type ScheduleProps = {
   cellInfoToDateRange(cell: CellInfo): DateRange;
   onActiveChange?(index: [number, number] | [null, null]): void;
   onClick?(index: [number, number] | [null, null]): void;
-  getIsActive(indexes: { cellIndex: number; rangeIndex: number }): boolean;
+  handleDelete?(eventId: string): void;
+  getIsActive(indexes: {
+    cellIndex: number;
+    rangeIndex: number;
+    eventId: string;
+  }): boolean;
   eventContentComponent?: any;
   eventRootComponent?: any;
   disabled?: boolean;
@@ -27,7 +32,7 @@ export type ScheduleProps = {
 
 export const Schedule = React.memo(function Schedule({
   classes,
-  ranges,
+  calendarEvents,
   grid,
   className,
   onChange,
@@ -37,6 +42,7 @@ export const Schedule = React.memo(function Schedule({
   cellInfoToDateRange,
   dateRangeToCells,
   onActiveChange,
+  handleDeleteWrapper,
   eventContentComponent,
   eventRootComponent,
   onClick,
@@ -44,42 +50,47 @@ export const Schedule = React.memo(function Schedule({
   disabled,
 }: {
   dateRangeToCells(range: DateRange): CellInfo[];
-  ranges: ScheduleType;
+  calendarEvents: CalendarEvent[];
   className?: string;
+  handleDeleteWrapper?: any;
   classes: ClassNames;
 } & ScheduleProps) {
   return (
     <div className={classes['range-boxes']}>
-      {ranges.map((dateRange, rangeIndex) => {
+      {calendarEvents.map((calendarEvent, rangeIndex) => {
         return (
           <span key={rangeIndex}>
-            {dateRangeToCells(dateRange).map((cell, cellIndex, cellArray) => {
-              return (
-                <RangeBox
-                  classes={classes}
-                  onActiveChange={onActiveChange}
-                  key={`${rangeIndex}.${ranges.length}.${cellIndex}.${
-                    cellArray.length
-                  }`}
-                  isResizable={isResizable}
-                  moveAxis={moveAxis}
-                  isDeletable={isDeletable}
-                  cellInfoToDateRange={cellInfoToDateRange}
-                  cellArray={cellArray}
-                  cellIndex={cellIndex}
-                  rangeIndex={rangeIndex}
-                  className={className}
-                  onChange={onChange}
-                  onClick={onClick}
-                  grid={grid}
-                  cell={cell}
-                  getIsActive={getIsActive}
-                  eventContentComponent={eventContentComponent}
-                  eventRootComponent={eventRootComponent}
-                  disabled={disabled}
-                />
-              );
-            })}
+            {dateRangeToCells(calendarEvent.ranges as DateRange).map(
+              (cell, cellIndex, cellArray) => {
+                return (
+                  <RangeBox
+                    calendarEvent={calendarEvent}
+                    classes={classes}
+                    onActiveChange={onActiveChange}
+                    key={`${rangeIndex}.${calendarEvents.length}.${cellIndex}.${
+                      cellArray.length
+                    }`}
+                    isResizable={isResizable}
+                    moveAxis={moveAxis}
+                    isDeletable={isDeletable}
+                    cellInfoToDateRange={cellInfoToDateRange}
+                    cellArray={cellArray}
+                    cellIndex={cellIndex}
+                    rangeIndex={rangeIndex}
+                    className={className}
+                    onChange={onChange}
+                    handleDelete={handleDeleteWrapper(calendarEvent.id)}
+                    onClick={onClick}
+                    grid={grid}
+                    cell={cell}
+                    getIsActive={getIsActive}
+                    eventContentComponent={eventContentComponent}
+                    eventRootComponent={eventRootComponent}
+                    disabled={disabled}
+                  />
+                );
+              },
+            )}
           </span>
         );
       })}

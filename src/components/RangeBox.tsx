@@ -10,12 +10,13 @@ import React, {
 } from 'react';
 import Draggable, { DraggableEventHandler } from 'react-draggable';
 import { useMousetrap } from '../hooks/useMousetrap';
-import { CellInfo } from '../types';
+import { CalendarEvent, CellInfo } from '../types';
 import { DefaultEventRootComponent } from './DefaultEventRootComponent';
-import { EventContent } from './EventContent';
+import { DefaultEventContent } from './EventContent';
 import { ScheduleProps } from './Schedule';
 
 export const RangeBox = React.memo(function RangeBox({
+  calendarEvent = {},
   classes,
   grid,
   rangeIndex,
@@ -24,16 +25,18 @@ export const RangeBox = React.memo(function RangeBox({
   cell,
   className,
   onChange,
+  handleDelete,
   cellInfoToDateRange,
   isResizable,
   moveAxis,
   onActiveChange,
   onClick,
   getIsActive,
-  eventContentComponent: EventContentComponent = EventContent,
+  eventContentComponent: EventContentComponent = DefaultEventContent,
   eventRootComponent: EventRootComponent = DefaultEventRootComponent,
   disabled,
 }: ScheduleProps & {
+  calendarEvent?: CalendarEvent;
   cellIndex: number;
   cellArray: CellInfo[];
   className?: string;
@@ -52,6 +55,7 @@ export const RangeBox = React.memo(function RangeBox({
     setModifiedCell(cell);
   }, [cell]);
 
+  // console.log('modifiedCell', modifiedCell);
   const modifiedDateRange = useMemo(() => cellInfoToDateRange(modifiedCell), [
     cellInfoToDateRange,
     modifiedCell,
@@ -67,117 +71,141 @@ export const RangeBox = React.memo(function RangeBox({
       return;
     }
 
-    onChange(cellInfoToDateRange(modifiedCell), rangeIndex);
+    onChange(
+      calendarEvent.id as string,
+      cellInfoToDateRange(modifiedCell),
+      rangeIndex,
+    );
   }, [modifiedCell, rangeIndex, disabled, cellInfoToDateRange, onChange]);
 
-  const isActive = useMemo(() => getIsActive({ cellIndex, rangeIndex }), [
-    cellIndex,
-    rangeIndex,
-    getIsActive,
-  ]);
-
-  useMousetrap(
-    'up',
-    () => {
-      if (!onChange || disabled || !isActive) {
-        return;
-      }
-
-      if (moveAxis === 'none' || moveAxis === 'x') {
-        return;
-      }
-
-      if (modifiedCell.startY === 0) {
-        return;
-      }
-
-      const newCell = {
-        ...modifiedCell,
-        startY: modifiedCell.startY - 1,
-        endY: modifiedCell.endY - 1,
-      };
-
-      onChange(cellInfoToDateRange(newCell), rangeIndex);
-    },
-    ref,
+  const isActive = useMemo(
+    () =>
+      getIsActive({
+        cellIndex,
+        rangeIndex,
+        eventId: 'TODO: REPLACE WITH ACTUAL EVENTID',
+      }),
+    [cellIndex, rangeIndex, getIsActive],
   );
 
-  useMousetrap(
-    'shift+up',
-    () => {
-      if (!onChange || !isResizable || disabled || !isActive) {
-        return;
-      }
+  // useMousetrap(
+  //   'up',
+  //   () => {
+  //     if (!onChange || disabled || !isActive) {
+  //       return;
+  //     }
 
-      if (
-        modifiedCell.endY === modifiedCell.startY ||
-        modifiedCell.spanY === 0
-      ) {
-        return;
-      }
+  //     if (moveAxis === 'none' || moveAxis === 'x') {
+  //       return;
+  //     }
 
-      const newCell = {
-        ...modifiedCell,
-        endY: modifiedCell.endY - 1,
-        spanY: modifiedCell.spanY - 1,
-      };
+  //     if (modifiedCell.startY === 0) {
+  //       return;
+  //     }
 
-      onChange(cellInfoToDateRange(newCell), rangeIndex);
-    },
-    ref,
-  );
+  //     const newCell = {
+  //       ...modifiedCell,
+  //       startY: modifiedCell.startY - 1,
+  //       endY: modifiedCell.endY - 1,
+  //     };
 
-  useMousetrap(
-    'down',
-    () => {
-      if (!onChange || disabled || !isActive) {
-        return;
-      }
+  //     onChange(
+  //       calendarEvent.id as string,
+  //       cellInfoToDateRange(newCell),
+  //       rangeIndex,
+  //     );
+  //   },
+  //   ref,
+  // );
 
-      if (moveAxis === 'none' || moveAxis === 'x') {
-        return;
-      }
+  // useMousetrap(
+  //   'shift+up',
+  //   () => {
+  //     if (!onChange || !isResizable || disabled || !isActive) {
+  //       return;
+  //     }
 
-      if (Math.round(modifiedCell.endY) >= grid.numVerticalCells - 1) {
-        return;
-      }
+  //     if (
+  //       modifiedCell.endY === modifiedCell.startY ||
+  //       modifiedCell.spanY === 0
+  //     ) {
+  //       return;
+  //     }
 
-      const newCell = {
-        ...modifiedCell,
-        startY: modifiedCell.startY + 1,
-        endY: modifiedCell.endY + 1,
-      };
+  //     const newCell = {
+  //       ...modifiedCell,
+  //       endY: modifiedCell.endY - 1,
+  //       spanY: modifiedCell.spanY - 1,
+  //     };
 
-      onChange(cellInfoToDateRange(newCell), rangeIndex);
-    },
-    ref,
-  );
+  //     onChange(
+  //       calendarEvent.id as string,
+  //       cellInfoToDateRange(newCell),
+  //       rangeIndex,
+  //     );
+  //   },
+  //   ref,
+  // );
 
-  useMousetrap(
-    'shift+down',
-    () => {
-      if (!onChange || !isResizable || disabled || !isActive) {
-        return;
-      }
+  // useMousetrap(
+  //   'down',
+  //   () => {
+  //     if (!onChange || disabled || !isActive) {
+  //       return;
+  //     }
 
-      if (moveAxis === 'none' || moveAxis === 'x') {
-        return;
-      }
+  //     if (moveAxis === 'none' || moveAxis === 'x') {
+  //       return;
+  //     }
 
-      if (Math.round(modifiedCell.endY) >= grid.numVerticalCells - 1) {
-        return;
-      }
+  //     if (Math.round(modifiedCell.endY) >= grid.numVerticalCells - 1) {
+  //       return;
+  //     }
 
-      const newCell = {
-        ...modifiedCell,
-        spanY: modifiedCell.spanY + 1,
-        endY: modifiedCell.endY + 1,
-      };
+  //     const newCell = {
+  //       ...modifiedCell,
+  //       startY: modifiedCell.startY + 1,
+  //       endY: modifiedCell.endY + 1,
+  //     };
 
-      onChange(cellInfoToDateRange(newCell), rangeIndex);
-    },
-    ref,
-  );
+  //     onChange(
+  //       calendarEvent.id as string,
+  //       cellInfoToDateRange(newCell),
+  //       rangeIndex,
+  //     );
+  //   },
+  //   ref,
+  // );
+
+  // useMousetrap(
+  //   'shift+down',
+  //   () => {
+  //     if (!onChange || !isResizable || disabled || !isActive) {
+  //       return;
+  //     }
+
+  //     if (moveAxis === 'none' || moveAxis === 'x') {
+  //       return;
+  //     }
+
+  //     if (Math.round(modifiedCell.endY) >= grid.numVerticalCells - 1) {
+  //       return;
+  //     }
+
+  //     const newCell = {
+  //       ...modifiedCell,
+  //       spanY: modifiedCell.spanY + 1,
+  //       endY: modifiedCell.endY + 1,
+  //     };
+
+  //     onChange(
+  //       calendarEvent.id as string,
+  //       cellInfoToDateRange(newCell),
+  //       rangeIndex,
+  //     );
+  //   },
+  //   ref,
+  // );
 
   const handleDrag: DraggableEventHandler = useCallback(
     (event, { y, x }) => {
@@ -272,14 +300,6 @@ export const RangeBox = React.memo(function RangeBox({
     [grid, rect, disabled, isResizable, setModifiedCell, cell, originalRect],
   );
 
-  const handleDelete = useCallback(() => {
-    if (!onChange || disabled) {
-      return;
-    }
-
-    onChange(undefined, rangeIndex);
-  }, [onChange, disabled, rangeIndex]);
-
   const handleOnFocus = useCallback(() => {
     if (!onActiveChange || disabled) {
       return;
@@ -308,6 +328,7 @@ export const RangeBox = React.memo(function RangeBox({
         : undefined,
     [classes.handle],
   );
+  // console.log('modifiedDateRange', modifiedDateRange);
 
   return (
     <Draggable
@@ -334,6 +355,7 @@ export const RangeBox = React.memo(function RangeBox({
         rangeIndex={rangeIndex}
         isActive={isActive}
         classes={classes}
+        calendarEvent={calendarEvent}
         className={classcat([
           classes.event,
           classes['range-boxes'],
@@ -377,7 +399,7 @@ export const RangeBox = React.memo(function RangeBox({
             width={width}
             height={height}
             classes={classes}
-            dateRange={modifiedDateRange}
+            calendarEvent={calendarEvent}
             isStart={isStart}
             isEnd={isEnd}
           />

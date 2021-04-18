@@ -20,12 +20,12 @@
   },
   "plugins": ["react", "compat", "css-modules", "react-hooks"],
   "rules": {
-    "no-console": "error",
+    "no-console": "warn",
     "react/prop-types": ["off"],
     "@typescript-eslint/no-var-requires": ["off"],
     "react-hooks/rules-of-hooks": "error",
     "react-hooks/exhaustive-deps": "warn",
-    "max-len": ["error", 120],
+    "max-len": ["error", 180],
     "max-depth": ["error", 4],
     "arrow-body-style": ["off"],
     "react/jsx-filename-extension": [

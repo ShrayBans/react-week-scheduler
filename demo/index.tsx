@@ -1,21 +1,27 @@
 import Tippy from '@tippy.js/react';
 import classcat from 'classcat';
-import compareAsc from 'date-fns/compare_asc';
 import format from 'date-fns/format';
-import getDay from 'date-fns/get_day';
-import getHours from 'date-fns/get_hours';
-import getMinutes from 'date-fns/get_minutes';
+import isDateEqual from 'date-fns/is_equal';
 import ar from 'date-fns/locale/ar';
 import de from 'date-fns/locale/de';
 import en from 'date-fns/locale/en';
 import ja from 'date-fns/locale/ja';
 import setDay from 'date-fns/set_day';
-import setHours from 'date-fns/set_hours';
-import setMinutes from 'date-fns/set_minutes';
 import startOfWeek from 'date-fns/start_of_week';
 // @ts-ignore
 import humanizeDuration from 'humanize-duration';
+import {
+  capitalize,
+  filter,
+  head,
+  keyBy,
+  map,
+  size,
+  times,
+  values,
+} from 'lodash';
 import mapValues from 'lodash/mapValues';
+import moment from 'moment-timezone';
 import 'pepjs';
 import React, { Fragment, useEffect, useMemo, useState } from 'react';
 import CustomProperties from 'react-custom-properties';
@@ -27,10 +33,22 @@ import { TimeGridScheduler } from '../src/components/TimeGridScheduler';
 import { SchedulerContext } from '../src/context';
 import { useMousetrap } from '../src/hooks/useMousetrap';
 import { classes as defaultClasses } from '../src/styles';
-import { EventRootProps, ScheduleType } from '../src/types';
+import {
+  CalendarCustomizations,
+  CalendarEvent,
+  CalendarEventCache,
+  EventRootProps,
+} from '../src/types';
 import DeleteIcon from './assets/outline-delete-24px.svg';
 import { Key } from './components/Key/Key';
 import demoClasses from './index.module.scss';
+import {
+  addGcalEvents,
+  deleteGcalEvents,
+  editGcalEvent,
+  fetchGcalEvents,
+} from './util/api';
+import { transformGcalEvents } from './util/dateHelpers';
 
 const locales = {
   ja,
@@ -45,22 +63,8 @@ const classes = mapValues(
     classcat([value, demoClasses[key]]),
 );
 
-const rangeStrings: [string, string][] = [
-  ['2019-03-04 00:15', '2019-03-04 01:45'],
-  ['2019-03-05 09:00', '2019-03-05 10:30'],
-  ['2019-03-06 22:00', '2019-03-06 22:30'],
-  ['2019-03-07 01:30', '2019-03-07 03:00'],
-  ['2019-03-07 05:30', '2019-03-07 10:00'],
-  ['2019-03-08 12:30', '2019-03-08 01:30'],
-  ['2019-03-09 22:00', '2019-03-09 23:59'],
-];
-
-const defaultSchedule: ScheduleType = rangeStrings.map(
-  range => range.map(dateString => new Date(dateString)) as [Date, Date],
-);
-
 const EventRoot = React.forwardRef<any, EventRootProps>(function EventRoot(
-  { handleDelete, disabled, ...props },
+  { handleDelete, disabled, calendarEvent, ...props },
   ref,
 ) {
   return (
@@ -71,15 +75,26 @@ const EventRoot = React.forwardRef<any, EventRootProps>(function EventRoot(
       hideOnClick={false}
       className={demoClasses.tooltip}
       content={
-        <button disabled={disabled} onClick={handleDelete}>
-          <DeleteIcon className={demoClasses.icon} />
-          Delete
-        </button>
+        <>
+          <div>
+            Event Name: <strong>{calendarEvent.summary}</strong>
+          </div>
+          <div>Description: {calendarEvent.description}</div>
+          <button
+            disabled={disabled}
+            onClick={handleDelete}
+            className={demoClasses.deleteButton}
+          >
+            <DeleteIcon className={demoClasses.icon} />
+            Delete
+          </button>
+        </>
       }
     >
       <DefaultEventRootComponent
         handleDelete={handleDelete}
         disabled={disabled}
+        calendarEvent={calendarEvent}
         {...props}
         ref={ref}
       />
@@ -88,43 +103,86 @@ const EventRoot = React.forwardRef<any, EventRootProps>(function EventRoot(
 });
 
 function App() {
-  const [weekStart, setWeekStart] = useState(1);
+  const [timeframe, setTimeframe] = useState('week');
+  const [weekStart, setWeekStart] = useState(1); // monday
+  const [hourStart, setHourStart] = useState(0);
+  const [hourEnd, setHourEnd] = useState(24);
+  const [refreshIntervalMinutes, setRefreshIntervalMinutes] = useState(5);
+
+  const [allCachedEvents, setCachedEvents] = useState<CalendarEventCache>({});
+  const [currentEvents, setCurrentEvents] = useState<CalendarEvent[]>([]);
+  const [selectedEvent, setSelectedEvent] = useState<CalendarEvent>(null);
+  const [dragPrecision, setDragPrecision] = useState(5);
+  const [visualGridPrecision, setVisualGridPrecision] = useState(30);
+
+  const [clickPrecision, setClickPrecision] = useState(visualGridPrecision);
+  const [cellHeight, setCellHeight] = useState(45);
+  const [cellWidth, setCellWidth] = useState(250);
+  const [disabled, setDisabled] = useState(false);
+  const [locale, setLocale] = useState('en');
+
+  const calendarCustomizations: CalendarCustomizations = {
+    timeframe,
+    weekStart,
+    hourStart,
+    hourEnd,
+    dragPrecision,
+    visualGridPrecision,
+    clickPrecision,
+  };
+
   const originDate = useMemo(
     () =>
-      startOfWeek(new Date('2019-03-04'), {
+      startOfWeek(moment.utc().toDate(), {
         weekStartsOn: weekStart,
       }),
     [weekStart],
   );
-  const defaultAdjustedSchedule = useMemo(
-    () =>
-      defaultSchedule
-        .map(
-          range =>
-            [
-              setMinutes(
-                setHours(
-                  setDay(originDate, getDay(range[0]), {
-                    weekStartsOn: weekStart,
-                  }),
-                  getHours(range[0]),
-                ),
-                getMinutes(range[0]),
-              ),
-              setMinutes(
-                setHours(
-                  setDay(originDate, getDay(range[1]), {
-                    weekStartsOn: weekStart,
-                  }),
-                  getHours(range[1]),
-                ),
-                getMinutes(range[1]),
-              ),
-            ] as [Date, Date],
-        )
-        .sort(([start], [end]) => compareAsc(start, end)),
-    [weekStart, originDate],
-  );
+
+  const refreshCachedEvents = async () => {
+    // Fetches Events
+    const fetchedEvents = await fetchGcalEvents(timeframe, weekStart);
+    const transformedEvents = await transformGcalEvents(
+      fetchedEvents.events,
+      weekStart,
+      originDate,
+    );
+
+    // Merges all cached events (removes deleted events and adds new events)
+    const mergedEvents = {
+      ...allCachedEvents,
+      ...keyBy(transformedEvents, 'id'),
+    };
+
+    setCachedEvents(mergedEvents);
+    setCurrentEvents(values(mergedEvents));
+  };
+
+  // TODO: Add back in once caching is fixed
+  // useInterval(() => {
+  //   const init = async () => {
+  //     // const fetchedCalendars = await fetchAllUserCalendars();
+  //     await refreshCachedEvents();
+  //   };
+
+  //   init();
+  // }, 1000 * 60 * refreshIntervalMinutes);
+
+  /**
+   * Fetching Events
+   */
+  useEffect(() => {
+    const init = async () => {
+      // const fetchedCalendars = await fetchAllUserCalendars();
+      await refreshCachedEvents();
+    };
+
+    init();
+  }, []);
+
+  /**
+   * Setting Schedule from Fetched Events
+   */
   const [
     scheduleState,
     {
@@ -135,10 +193,136 @@ function App() {
       canUndo: canUndoSchedule,
       canRedo: canRedoSchedule,
     },
-  ] = useUndo<ScheduleType>(defaultAdjustedSchedule);
+  ] = useUndo<CalendarEvent[]>(currentEvents);
 
+  /**
+   * API Methods
+   */
+  const addCalendarEvent = async newEvent => {
+    if (disabled) return;
+    const newEventPayload = {
+      ...newEvent,
+      ranges: [newEvent.startTime, newEvent.endTime],
+    };
+    setDisabled(true);
+
+    const savedSchedule = scheduleState.present;
+    // Try to add the schedule locally
+    // setSchedule([...scheduleState.present, newEventPayload]);
+
+    // API Call to Add Gcal Event
+    const { event, isCreated } = await addGcalEvents(newEventPayload);
+    const transformedEvents = transformGcalEvents(
+      [event],
+      weekStart,
+      originDate,
+    );
+    const mergedEvents = {
+      ...allCachedEvents,
+      [event.id]: head(transformedEvents),
+    };
+    setCachedEvents(mergedEvents);
+
+    // If API call fails, then revert
+    if (!isCreated) {
+      undoSchedule();
+    } else {
+      setSchedule([...savedSchedule, ...transformedEvents]);
+    }
+    setDisabled(false);
+
+    return event;
+  };
+
+  const duplicateCalendarEvent = async () => {
+    if (!selectedEvent) return;
+    let origStartTime = selectedEvent.startTime;
+    let origEndTime = selectedEvent.endTime;
+    const durationMin = moment(origEndTime).diff(
+      moment(origStartTime),
+      'minutes',
+    );
+
+    let hasDuplicate = true,
+      newEventPayload;
+    while (hasDuplicate) {
+      newEventPayload = {
+        summary: selectedEvent.summary,
+        startTime: origEndTime,
+        endTime: moment(origEndTime)
+          .add(Number(durationMin), 'minutes')
+          .toDate(),
+        description: selectedEvent.description,
+      };
+
+      const matchedEvent = filter(currentEvents, currEvent => {
+        return (
+          newEventPayload.summary === currEvent.summary &&
+          isDateEqual(newEventPayload.startTime, currEvent.startTime) &&
+          isDateEqual(newEventPayload.endTime, currEvent.endTime)
+        );
+      });
+      if (size(matchedEvent) == 0) {
+        hasDuplicate = false;
+      } else {
+        origEndTime = newEventPayload.endTime;
+      }
+    }
+
+    const addedEvent = await addCalendarEvent(newEventPayload);
+  };
+  const deleteCalendarEvent = async eventId => {
+    const usedEventId = eventId || selectedEvent.id;
+    if (disabled) return;
+    if (!usedEventId) return;
+    setDisabled(true);
+    // Try to delete the schedule locally
+    setSchedule(
+      filter(scheduleState.present, event => {
+        return event.id !== usedEventId;
+      }),
+    );
+
+    // API Call to Delete Gcal Event
+    const { event, isDeleted } = await deleteGcalEvents(usedEventId);
+
+    // If API call fails, then revert
+    if (!isDeleted) undoSchedule();
+
+    setDisabled(false);
+  };
+  const editCalendarEvent = async (
+    eventId: string,
+    modifiedEvent: Partial<CalendarEvent>,
+  ) => {
+    if (disabled) return;
+    if (!eventId) return;
+    setDisabled(true);
+
+    const newSchedule = map(scheduleState.present, currEvent => {
+      if (currEvent.id == eventId) {
+        return { ...currEvent, ...modifiedEvent };
+      }
+    });
+    setSchedule(newSchedule);
+
+    const { event, isEdited } = await editGcalEvent({
+      id: eventId,
+      ...modifiedEvent,
+    });
+
+    if (!isEdited) undoSchedule();
+    setDisabled(false);
+  };
+  const selectEvent = (newEvent: CalendarEvent) => {
+    setSelectedEvent(newEvent);
+  };
+
+  /**
+   * Keyboard Shortcuts - TODO put into a hook
+   */
   useMousetrap(
-    'ctrl+z',
+    ['mod+z'],
     () => {
       if (!canUndoSchedule) {
         return;
@@ -148,9 +332,8 @@ function App() {
     },
     document,
   );
-
   useMousetrap(
-    'ctrl+shift+z',
+    'mod+shift+z',
     () => {
       if (!canRedoSchedule) {
         return;
@@ -160,24 +343,30 @@ function App() {
     },
     document,
   );
+  useMousetrap(
+    'mod+v',
+    () => {
+      if (!selectedEvent) return;
 
-  const [verticalPrecision, setVerticalPrecision] = useState(15);
-  const [
-    visualGridVerticalPrecision,
-    setVisualGridVerticalPrecision,
-  ] = useState(60);
-  const [cellClickPrecision, setCellClickPrecision] = useState(
-    visualGridVerticalPrecision,
+      duplicateCalendarEvent();
+    },
+    document,
   );
-  const [cellHeight, setCellHeight] = useState(45);
-  const [cellWidth, setCellWidth] = useState(250);
-  const [disabled, setDisabled] = useState(false);
-  const [locale, setLocale] = useState('en');
+
+  const [initLoad, setInitLoad] = useState(false);
 
   useEffect(() => {
-    setSchedule(defaultAdjustedSchedule);
-    resetSchedule(defaultAdjustedSchedule);
-  }, [defaultAdjustedSchedule, setSchedule, resetSchedule]);
+    setCurrentEvents(scheduleState.present);
+  }, [setCurrentEvents, scheduleState.present]);
+
+  useEffect(() => {
+    if (currentEvents.length && !initLoad) {
+      console.log('reset');
+      setSchedule(currentEvents);
+      resetSchedule(currentEvents);
+      setInitLoad(true);
+    }
+  }, [currentEvents, setSchedule, resetSchedule]);
 
   return (
     <>
@@ -196,14 +385,14 @@ function App() {
         >
           Redo ⟳
         </button>
-        <label htmlFor="vertical_precision">
-          Precision:
+        <label htmlFor="drag_precision">
+          Drag Precision:
           <select
-            name="vertical_precision"
-            id="vertical_precision"
-            value={verticalPrecision}
+            name="drag_precision"
+            id="drag_precision"
+            value={dragPrecision}
             onChange={({ target: { value } }) =>
-              setVerticalPrecision(Number(value))
+              setDragPrecision(Number(value))
             }
           >
             {[5, 10, 15, 30, 60].map(value => (
@@ -213,7 +402,7 @@ function App() {
             ))}
           </select>
         </label>
-        <label htmlFor="disabled">
+        {/* <label htmlFor="disabled">
           <input
             id="disabled"
             type="checkbox"
@@ -222,8 +411,65 @@ function App() {
             onChange={e => setDisabled(Boolean(e.target.checked))}
           />
           Disabled
+        </label> */}
+        <label htmlFor="timeframe">
+          Timeframe:
+          <select
+            name="timeframe"
+            id="timeframe"
+            value={timeframe}
+            onChange={({ target: { value } }) => setTimeframe(value)}
+          >
+            {['month', 'week', 'day', 'hour'].map(value => (
+              <option key={value} value={value}>
+                {capitalize(value)}
+              </option>
+            ))}
+          </select>
         </label>
-        <label style={{ display: 'none' }} htmlFor="start_of_week">
+        <label htmlFor="hour_start">
+          Hour Start:
+          <select
+            name="hour_start"
+            id="hour_start"
+            value={hourStart}
+            onChange={({ target: { value } }) => {
+              if (hourEnd > Number(value)) {
+                setHourStart(Number(value));
+              } else {
+                setHourStart(Number(hourEnd));
+              }
+            }}
+          >
+            {times(24).map(value => (
+              <option key={value} value={value}>
+                {value}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label htmlFor="hour_end">
+          Hour End:
+          <select
+            name="hour_end"
+            id="hour_end"
+            value={hourEnd}
+            onChange={({ target: { value } }) => {
+              if (Number(value) > hourStart) {
+                setHourEnd(Number(value));
+              } else {
+                setHourEnd(Number(hourEnd));
+              }
+            }}
+          >
+            {times(25).map(value => (
+              <option key={value} value={value}>
+                {value}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label htmlFor="start_of_week">
           Start of week:
           <select
             name="start_of_week"
@@ -240,14 +486,14 @@ function App() {
             ))}
           </select>
         </label>
-        <label htmlFor="visual_grid_vertical_precision">
+        <label htmlFor="visual_grid_precision">
           Grid increments:
           <select
-            name="visual_grid_vertical_precision"
-            id="visual_grid_vertical_precision"
-            value={visualGridVerticalPrecision}
+            name="visual_grid_precision"
+            id="visual_grid_precision"
+            value={visualGridPrecision}
             onChange={({ target: { value } }) =>
-              setVisualGridVerticalPrecision(Number(value))
+              setVisualGridPrecision(Number(value))
             }
           >
             {[15, 30, 60].map(value => (
@@ -257,14 +503,14 @@ function App() {
             ))}
           </select>
         </label>
-        <label htmlFor="min_cell_click_precision">
+        <label htmlFor="click_precision">
           Min click precision:
           <select
-            name="min_cell_click_precision"
-            id="min_cell_click_precision"
-            value={cellClickPrecision}
+            name="click_precision"
+            id="click_precision"
+            value={clickPrecision}
             onChange={({ target: { value } }) =>
-              setCellClickPrecision(Number(value))
+              setClickPrecision(Number(value))
             }
           >
             {[15, 30, 60].map(value => (
@@ -335,13 +581,16 @@ function App() {
               key={originDate.toString()}
               classes={classes}
               originDate={originDate}
+              allCachedEvents={allCachedEvents}
               schedule={scheduleState.present}
-              onChange={setSchedule}
-              verticalPrecision={verticalPrecision}
-              visualGridVerticalPrecision={visualGridVerticalPrecision}
-              cellClickPrecision={cellClickPrecision}
+              calendarCustomizations={calendarCustomizations}
+              addEvent={addCalendarEvent}
+              editEvent={editCalendarEvent}
+              deleteEvent={deleteCalendarEvent}
+              selectEvent={selectEvent}
+              selectedEvent={selectedEvent}
               eventRootComponent={EventRoot}
-              disabled={disabled}
+              // disabled={disabled}
             />
           </SchedulerContext.Provider>
         </Fragment>
