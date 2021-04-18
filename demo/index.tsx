@@ -64,22 +64,60 @@ const classes = mapValues(
 );
 
 const EventRoot = React.forwardRef<any, EventRootProps>(function EventRoot(
-  { handleDelete, disabled, calendarEvent, ...props },
+  {
+    handleDelete,
+    isSelected = false,
+    isEdit = false,
+    disabled,
+    calendarEvent,
+    ...props
+  },
   ref,
 ) {
   return (
     <Tippy
       arrow
       interactive
+      placement={'right-start'}
       isEnabled={!disabled}
       hideOnClick={false}
       className={demoClasses.tooltip}
+      // isVisible={isSelected}
       content={
         <>
           <div>
-            Event Name: <strong>{calendarEvent.summary}</strong>
+            <strong>Event Name</strong>:{' '}
+            {isEdit ? (
+              <input
+                id="summary"
+                name="summary"
+                type="text"
+                className={demoClasses.backgroundInput}
+                value={calendarEvent.summary}
+                onChange={({ target: { value } }) => {
+                  console.log('value', value);
+                }}
+              />
+            ) : (
+              calendarEvent.summary
+            )}
           </div>
-          <div>Description: {calendarEvent.description}</div>
+          <div>
+            <strong>Description</strong>:{' '}
+            {isEdit ? (
+              <textarea
+                id="description"
+                name="description"
+                className={demoClasses.backgroundInput}
+                value={calendarEvent.description}
+                onChange={({ target: { value } }) => {
+                  console.log('value', value);
+                }}
+              />
+            ) : (
+              calendarEvent.description
+            )}
+          </div>
           <button
             disabled={disabled}
             onClick={handleDelete}
@@ -119,6 +157,7 @@ function App() {
   const [cellHeight, setCellHeight] = useState(45);
   const [cellWidth, setCellWidth] = useState(250);
   const [disabled, setDisabled] = useState(false);
+  const [isEdit, setIsEdit] = useState(false);
   const [locale, setLocale] = useState('en');
 
   const calendarCustomizations: CalendarCustomizations = {
@@ -321,6 +360,13 @@ function App() {
   /**
    * Keyboard Shortcuts - TODO put into a hook
    */
+  useMousetrap(
+    ['mod+e'],
+    () => {
+      setIsEdit(!isEdit);
+    },
+    document,
+  );
   useMousetrap(
     ['mod+z'],
     () => {
@@ -588,6 +634,7 @@ function App() {
               editEvent={editCalendarEvent}
               deleteEvent={deleteCalendarEvent}
               selectEvent={selectEvent}
+              isEdit={isEdit}
               selectedEvent={selectedEvent}
               eventRootComponent={EventRoot}
               // disabled={disabled}

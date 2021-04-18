@@ -16,6 +16,8 @@ export type EventRootProps = {
   rangeIndex: number;
   isActive: boolean;
   disabled?: boolean;
+  isSelected?: boolean;
+  isEdit?: boolean;
   handleDelete(): void;
   calendarEvent: CalendarEvent;
 };

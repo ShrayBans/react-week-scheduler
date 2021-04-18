@@ -58,6 +58,7 @@ export const TimeGridScheduler = React.memo(function TimeGridScheduler({
   editEvent,
   deleteEvent,
   selectEvent,
+  isEdit,
   selectedEvent,
   onEventClick,
   eventContentComponent,
@@ -110,6 +111,7 @@ export const TimeGridScheduler = React.memo(function TimeGridScheduler({
   editEvent(eventId: string, newSchedule: CalendarEvent): void;
   deleteEvent(eventId: string): void;
   selectEvent(newSchedule: CalendarEvent): void;
+  isEdit?: boolean;
   selectedEvent: CalendarEvent;
   onEventClick?: ScheduleProps['onClick'];
   eventContentComponent?: ScheduleProps['eventContentComponent'];
@@ -627,6 +629,7 @@ export const TimeGridScheduler = React.memo(function TimeGridScheduler({
               className={classes['is-pending-creation']}
               calendarEvents={concat(filteredSchedule, pendingCreation)}
               handleDeleteWrapper={handleDeleteWrapper}
+              isEdit={isEdit}
               grid={grid}
               moveAxis="none"
               eventContentComponent={eventContentComponent}
@@ -645,6 +648,7 @@ export const TimeGridScheduler = React.memo(function TimeGridScheduler({
               handleDeleteWrapper={handleDeleteWrapper}
               onChange={handleEventChange}
               onClick={onEventClick}
+              isEdit={isEdit}
               calendarEvents={filteredSchedule}
               grid={grid}
               eventContentComponent={eventContentComponent}

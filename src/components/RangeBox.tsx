@@ -28,6 +28,7 @@ export const RangeBox = React.memo(function RangeBox({
   handleDelete,
   cellInfoToDateRange,
   isResizable,
+  isEdit,
   moveAxis,
   onActiveChange,
   onClick,
@@ -354,6 +355,7 @@ export const RangeBox = React.memo(function RangeBox({
         cellIndex={cellIndex}
         rangeIndex={rangeIndex}
         isActive={isActive}
+        isEdit={isEdit}
         classes={classes}
         calendarEvent={calendarEvent}
         className={classcat([

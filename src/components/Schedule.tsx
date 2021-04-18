@@ -15,6 +15,7 @@ export type ScheduleProps = {
   onChange?: OnChangeCallback;
   isResizable?: boolean;
   isDeletable?: boolean;
+  isEdit?: boolean;
   moveAxis: 'none' | 'both' | 'x' | 'y';
   cellInfoToDateRange(cell: CellInfo): DateRange;
   onActiveChange?(index: [number, number] | [null, null]): void;
@@ -38,6 +39,7 @@ export const Schedule = React.memo(function Schedule({
   onChange,
   isResizable,
   isDeletable,
+  isEdit,
   moveAxis,
   cellInfoToDateRange,
   dateRangeToCells,
@@ -73,6 +75,7 @@ export const Schedule = React.memo(function Schedule({
                     isResizable={isResizable}
                     moveAxis={moveAxis}
                     isDeletable={isDeletable}
+                    isEdit={isEdit}
                     cellInfoToDateRange={cellInfoToDateRange}
                     cellArray={cellArray}
                     cellIndex={cellIndex}
