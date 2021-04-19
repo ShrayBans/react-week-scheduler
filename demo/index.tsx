@@ -178,6 +178,7 @@ function App() {
   const [allCachedEvents, setCachedEvents] = useState<CalendarEventCache>({});
   const [currentEvents, setCurrentEvents] = useState<CalendarEvent[]>([]);
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent>(null);
+  console.log('selectedEvent', selectedEvent);
   const [dragPrecision, setDragPrecision] = useState(5);
   const [visualGridPrecision, setVisualGridPrecision] = useState(30);
 

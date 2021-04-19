@@ -315,15 +315,17 @@ export const RangeBox = React.memo(function RangeBox({
   );
 
   const handleOnFocus = useCallback(() => {
-    if (!onActiveChange || disabled) {
+    if (!onClick || disabled) {
       return;
     }
 
-    onActiveChange([rangeIndex, cellIndex]);
-  }, [onActiveChange, disabled, rangeIndex, cellIndex]);
+    // onActiveChange([rangeIndex, cellIndex]);
+    onClick(calendarEvent);
+  }, [onClick, disabled, rangeIndex, cellIndex]);
 
   const handleOnClick = useCallback(() => {
-    if (!onClick || disabled || !isActive) {
+    console.log('123', 123);
+    if (!onClick || disabled) {
       return;
     }
 
