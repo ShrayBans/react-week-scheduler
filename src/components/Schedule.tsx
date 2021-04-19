@@ -16,10 +16,13 @@ export type ScheduleProps = {
   isResizable?: boolean;
   isDeletable?: boolean;
   isEdit?: boolean;
+  selectedEventId?: string;
   moveAxis: 'none' | 'both' | 'x' | 'y';
   cellInfoToDateRange(cell: CellInfo): DateRange;
   onActiveChange?(index: [number, number] | [null, null]): void;
-  onClick?(index: [number, number] | [null, null]): void;
+  onClick?(selectedEvent: CalendarEvent): void;
+  editEvent?(eventId: string, modifiedEvent: Partial<CalendarEvent>): void;
+  setIsEdit?(isEdit: boolean): void;
   handleDelete?(eventId: string): void;
   getIsActive(indexes: {
     cellIndex: number;
@@ -45,6 +48,9 @@ export const Schedule = React.memo(function Schedule({
   dateRangeToCells,
   onActiveChange,
   handleDeleteWrapper,
+  selectedEventId,
+  setIsEdit,
+  editEvent,
   eventContentComponent,
   eventRootComponent,
   onClick,
@@ -76,12 +82,15 @@ export const Schedule = React.memo(function Schedule({
                     moveAxis={moveAxis}
                     isDeletable={isDeletable}
                     isEdit={isEdit}
+                    setIsEdit={setIsEdit}
+                    selectedEventId={selectedEventId}
                     cellInfoToDateRange={cellInfoToDateRange}
                     cellArray={cellArray}
                     cellIndex={cellIndex}
                     rangeIndex={rangeIndex}
                     className={className}
                     onChange={onChange}
+                    editEvent={editEvent}
                     handleDelete={handleDeleteWrapper(calendarEvent.id)}
                     onClick={onClick}
                     grid={grid}

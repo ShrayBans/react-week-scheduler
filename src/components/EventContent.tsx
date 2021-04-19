@@ -45,9 +45,9 @@ export const DefaultEventContent = React.memo(function EventContent({
       <span aria-hidden className={classes.end}>
         {isStart && start}
       </span>
-      {/* <span aria-hidden className={classes.end}>
-        {isEnd && end}
-      </span> */}
+      <span aria-hidden className={classes.end}>
+        {isEnd && ` - ${end}`}
+      </span>
     </div>
   );
 });

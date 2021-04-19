@@ -11,15 +11,16 @@ const dropSame = (
   locale: typeof import('date-fns/locale/en'),
 ): [string, string] => {
   const [first, second] = dates.map(date => format(date, template, { locale }));
-  if (first !== second) {
-    return [first, second];
-  }
+  return [first, second];
+  // if (first !== second) {
+  //   return [first, second];
+  // }
 
-  if (takeSecond) {
-    return ['', second];
-  }
+  // if (takeSecond) {
+  //   return ['', second];
+  // }
 
-  return [first, ''];
+  // return [first, ''];
 };
 
 const formatHour = (

@@ -18,7 +18,9 @@ export type EventRootProps = {
   disabled?: boolean;
   isSelected?: boolean;
   isEdit?: boolean;
+  setIsEdit(isEdit: boolean): void;
   handleDelete(): void;
+  handleEdit(eventId: string, calendarEvent: Partial<CalendarEvent>): void;
   calendarEvent: CalendarEvent;
 };
 

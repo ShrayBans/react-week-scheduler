@@ -39,7 +39,7 @@ import {
   CalendarEventCache,
   EventRootProps,
 } from '../src/types';
-import DeleteIcon from './assets/outline-delete-24px.svg';
+import { default as DeleteIcon } from './assets/outline-delete-24px.svg';
 import { Key } from './components/Key/Key';
 import demoClasses from './index.module.scss';
 import {
@@ -68,12 +68,17 @@ const EventRoot = React.forwardRef<any, EventRootProps>(function EventRoot(
     handleDelete,
     isSelected = false,
     isEdit = false,
+    handleEdit,
     disabled,
     calendarEvent,
+    setIsEdit,
     ...props
   },
   ref,
 ) {
+  const [summary, setSummary] = useState(calendarEvent.summary);
+  const [description, setDescription] = useState(calendarEvent.description);
+
   return (
     <Tippy
       arrow
@@ -82,7 +87,7 @@ const EventRoot = React.forwardRef<any, EventRootProps>(function EventRoot(
       isEnabled={!disabled}
       hideOnClick={false}
       className={demoClasses.tooltip}
-      // isVisible={isSelected}
+      isVisible={props.isActive}
       content={
         <>
           <div>
@@ -93,13 +98,13 @@ const EventRoot = React.forwardRef<any, EventRootProps>(function EventRoot(
                 name="summary"
                 type="text"
                 className={demoClasses.backgroundInput}
-                value={calendarEvent.summary}
+                value={summary}
                 onChange={({ target: { value } }) => {
-                  console.log('value', value);
+                  setSummary(value);
                 }}
               />
             ) : (
-              calendarEvent.summary
+              summary
             )}
           </div>
           <div>
@@ -109,13 +114,13 @@ const EventRoot = React.forwardRef<any, EventRootProps>(function EventRoot(
                 id="description"
                 name="description"
                 className={demoClasses.backgroundInput}
-                value={calendarEvent.description}
+                value={description}
                 onChange={({ target: { value } }) => {
-                  console.log('value', value);
+                  setDescription(value);
                 }}
               />
             ) : (
-              calendarEvent.description
+              description
             )}
           </div>
           <button
@@ -126,10 +131,33 @@ const EventRoot = React.forwardRef<any, EventRootProps>(function EventRoot(
             <DeleteIcon className={demoClasses.icon} />
             Delete
           </button>
+          <button
+            onClick={() => {
+              setIsEdit(!isEdit);
+            }}
+            className={demoClasses.editButton}
+          >
+            Edit
+          </button>
+          <button
+            disabled={!isEdit}
+            onClick={() => {
+              handleEdit(calendarEvent.id, {
+                summary,
+                description,
+              });
+            }}
+            className={demoClasses.saveButton}
+          >
+            <DeleteIcon className={demoClasses.icon} />
+            {/* <SaveIcon className={demoClasses.icon} /> */}
+            Save
+          </button>
         </>
       }
     >
       <DefaultEventRootComponent
+        handleEdit={handleEdit}
         handleDelete={handleDelete}
         disabled={disabled}
         calendarEvent={calendarEvent}
@@ -237,8 +265,9 @@ function App() {
   /**
    * API Methods
    */
-  const addCalendarEvent = async newEvent => {
+  const addCalendarEvent = async (newEvent, isDuplicate = false) => {
     if (disabled) return;
+    if (selectedEvent && !isDuplicate) return;
     const newEventPayload = {
       ...newEvent,
       ranges: [newEvent.startTime, newEvent.endTime],
@@ -308,10 +337,11 @@ function App() {
       }
     }
 
-    const addedEvent = await addCalendarEvent(newEventPayload);
+    const addedEvent = await addCalendarEvent(newEventPayload, true);
   };
   const deleteCalendarEvent = async eventId => {
     const usedEventId = eventId || selectedEvent.id;
+    console.log('disabled', disabled);
     if (disabled) return;
     if (!usedEventId) return;
     setDisabled(true);
@@ -330,6 +360,16 @@ function App() {
 
     setDisabled(false);
   };
+
+  /**
+   * Selects an event
+   * @param newEvent
+   */
+  const selectEvent = (newEvent: CalendarEvent) => {
+    console.log('selectEvent', newEvent);
+    setSelectedEvent(newEvent);
+  };
+
   const editCalendarEvent = async (
     eventId: string,
     modifiedEvent: Partial<CalendarEvent>,
@@ -338,24 +378,27 @@ function App() {
     if (!eventId) return;
     setDisabled(true);
 
+    let editedEvent;
     const newSchedule = map(scheduleState.present, currEvent => {
       if (currEvent.id == eventId) {
-        return { ...currEvent, ...modifiedEvent };
+        editedEvent = { ...currEvent, ...modifiedEvent };
+        return editedEvent;
       }
+      return currEvent;
     });
+    console.log('newSchedule', newSchedule);
     setSchedule(newSchedule);
 
     const { event, isEdited } = await editGcalEvent({
       id: eventId,
-      ...modifiedEvent,
+      ...editedEvent,
     });
 
     if (!isEdited) undoSchedule();
     setDisabled(false);
+    selectEvent(null);
   };
-  const selectEvent = (newEvent: CalendarEvent) => {
-    setSelectedEvent(newEvent);
-  };
+  console.log('scheduleState', scheduleState.present);
 
   /**
    * Keyboard Shortcuts - TODO put into a hook
@@ -631,9 +674,13 @@ function App() {
               schedule={scheduleState.present}
               calendarCustomizations={calendarCustomizations}
               addEvent={addCalendarEvent}
+              setIsEdit={setIsEdit}
               editEvent={editCalendarEvent}
               deleteEvent={deleteCalendarEvent}
               selectEvent={selectEvent}
+              onEventClick={e => {
+                selectEvent(e);
+              }}
               isEdit={isEdit}
               selectedEvent={selectedEvent}
               eventRootComponent={EventRoot}

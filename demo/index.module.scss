@@ -15,6 +15,9 @@ html {
   padding: 10px;
   background-color: #333;
   text-align: left;
+  padding-right: 50px;
+  min-width: 300px;
+
   button {
     padding: 0.3125rem 0.5625rem;
     appearance: none;
@@ -39,7 +42,31 @@ html {
     text-align: right;
     background-color: red;
     position: relative;
-    right: 0;
+    width: 85px;
+    height: 40px;
+  }
+
+  .saveButton {
+    margin-left: 10px;
+    margin-top: 10px;
+    text-align: right;
+    position: relative;
+    background-color: lightblue;
+    width: 85px;
+    height: 40px;
+    button[disabled='disabled'],
+    button:disabled {
+      opacity: 0.2;
+      border: 1px solid #999999;
+      background-color: #cccccc;
+      color: red;
+    }
+  }
+
+  .editButton {
+    position: absolute;
+    top: 5px;
+    right: 5px;
   }
 
   .backgroundInput {

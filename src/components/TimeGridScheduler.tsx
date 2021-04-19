@@ -59,6 +59,7 @@ export const TimeGridScheduler = React.memo(function TimeGridScheduler({
   deleteEvent,
   selectEvent,
   isEdit,
+  setIsEdit,
   selectedEvent,
   onEventClick,
   eventContentComponent,
@@ -108,9 +109,10 @@ export const TimeGridScheduler = React.memo(function TimeGridScheduler({
    */
   defaultHours?: [number, number];
   addEvent(newSchedule: CalendarEvent): void;
+  setIsEdit(isEdit: boolean): void;
   editEvent(eventId: string, newSchedule: CalendarEvent): void;
   deleteEvent(eventId: string): void;
-  selectEvent(newSchedule: CalendarEvent): void;
+  selectEvent(newSchedule: Partial<CalendarEvent>): void;
   isEdit?: boolean;
   selectedEvent: CalendarEvent;
   onEventClick?: ScheduleProps['onClick'];
@@ -337,7 +339,7 @@ export const TimeGridScheduler = React.memo(function TimeGridScheduler({
   );
 
   /**
-   * Triggers when event is clicked & Potentially Dragged
+   * Triggers when event is clicked & when Dragged/Resized event ends
    */
   const handleEventChange = useCallback<OnChangeCallback>(
     (eventId, newDateRange, rangeIndex) => {
@@ -372,6 +374,9 @@ export const TimeGridScheduler = React.memo(function TimeGridScheduler({
         newSchedule = newDateRange;
       }
 
+      console.log('newDateRange', newDateRange);
+      console.log('newSchedule', newSchedule);
+
       editEvent(eventId, {
         startTime: newSchedule[0],
         endTime: newSchedule[1],
@@ -392,12 +397,12 @@ export const TimeGridScheduler = React.memo(function TimeGridScheduler({
 
   const getIsActive = useCallback(
     ({ rangeIndex, cellIndex, eventId }) => {
-      if (rangeIndex === activeRangeIndex && cellIndex === activeCellIndex) {
-        const newSelectedEvent = get(schedule, activeRangeIndex as number);
-        if (!selectedEvent || selectedEvent.id != newSelectedEvent.id) {
-          selectEvent(newSelectedEvent);
-        }
-      }
+      // if (rangeIndex === activeRangeIndex && cellIndex === activeCellIndex) {
+      //   const newSelectedEvent = get(schedule, activeRangeIndex as number);
+      //   if (!selectedEvent || selectedEvent.id != newSelectedEvent.id) {
+      //     selectEvent(newSelectedEvent);
+      //   }
+      // }
 
       return (
         (rangeIndex === activeRangeIndex && cellIndex === activeCellIndex) ||
@@ -414,9 +419,11 @@ export const TimeGridScheduler = React.memo(function TimeGridScheduler({
   };
 
   const handleDeleteSelectedEvent = useCallback(() => {
+    console.log('selectedEvent', selectedEvent);
     if (!selectedEvent) {
       return;
     } else {
+      console.log('selectedEvent.id', selectedEvent.id);
       deleteEvent(selectedEvent.id as string);
     }
   }, [selectedEvent]);
@@ -513,8 +520,12 @@ export const TimeGridScheduler = React.memo(function TimeGridScheduler({
   );
 
   const handleCellClick = useCallback(
-    (dayIndex: number, timeIndex: number) => (event: React.MouseEvent) => {
-      console.log('handleCellClick');
+    (dayIndex: number, timeIndex: number) => (selectedEvent: CalendarEvent) => {
+      if (!!selectedEvent) {
+        //@ts-ignore
+        selectEvent(null);
+        return;
+      }
       if (!grid || disabled) {
         return;
       }
@@ -532,9 +543,6 @@ export const TimeGridScheduler = React.memo(function TimeGridScheduler({
       const dateRanges = cellInfoToDateRanges(cell);
 
       setPendingCreation(dateRanges);
-
-      event.stopPropagation();
-      event.preventDefault();
     },
     [grid, disabled, toY, clickPrecision, cellInfoToDateRanges],
   );
@@ -629,7 +637,10 @@ export const TimeGridScheduler = React.memo(function TimeGridScheduler({
               className={classes['is-pending-creation']}
               calendarEvents={concat(filteredSchedule, pendingCreation)}
               handleDeleteWrapper={handleDeleteWrapper}
+              editEvent={editEvent}
               isEdit={isEdit}
+              setIsEdit={setIsEdit}
+              selectedEventId={selectedEvent && selectedEvent.id}
               grid={grid}
               moveAxis="none"
               eventContentComponent={eventContentComponent}
@@ -645,10 +656,13 @@ export const TimeGridScheduler = React.memo(function TimeGridScheduler({
               isResizable
               moveAxis="both"
               isDeletable
+              editEvent={editEvent}
               handleDeleteWrapper={handleDeleteWrapper}
               onChange={handleEventChange}
               onClick={onEventClick}
               isEdit={isEdit}
+              setIsEdit={setIsEdit}
+              selectedEventId={selectedEvent && selectedEvent.id}
               calendarEvents={filteredSchedule}
               grid={grid}
               eventContentComponent={eventContentComponent}
@@ -671,11 +685,13 @@ export const TimeGridScheduler = React.memo(function TimeGridScheduler({
                       return (
                         <Cell
                           classes={classes}
-                          onClick={handleCellClick(
-                            dayIndex,
-                            timeIndex *
-                              (numVerticalCells / numVisualVerticalCells),
-                          )}
+                          onClick={() => {
+                            handleCellClick(
+                              dayIndex,
+                              timeIndex *
+                                (numVerticalCells / numVisualVerticalCells),
+                            )(selectedEvent);
+                          }}
                           getDateRangeForVisualGrid={getDateRangeForVisualGrid}
                           key={timeIndex}
                           timeIndex={timeIndex}

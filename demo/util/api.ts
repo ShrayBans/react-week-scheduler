@@ -67,7 +67,7 @@ export const addGcalEvents = async (eventBody: CalendarEvent) => {
     );
 
     isCreated = true;
-    event = response.data;
+    event = response;
   } catch (e) {
     console.log('e', e);
   }

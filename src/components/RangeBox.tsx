@@ -26,6 +26,8 @@ export const RangeBox = React.memo(function RangeBox({
   className,
   onChange,
   handleDelete,
+  setIsEdit,
+  editEvent,
   cellInfoToDateRange,
   isResizable,
   isEdit,
@@ -33,6 +35,7 @@ export const RangeBox = React.memo(function RangeBox({
   onActiveChange,
   onClick,
   getIsActive,
+  selectedEventId,
   eventContentComponent: EventContentComponent = DefaultEventContent,
   eventRootComponent: EventRootComponent = DefaultEventRootComponent,
   disabled,
@@ -46,6 +49,7 @@ export const RangeBox = React.memo(function RangeBox({
 }) {
   const ref = useRef(null);
   const [modifiedCell, setModifiedCell] = useState(cell);
+  const [isResizeOrDrag, setIsResizeOrDrag] = useState(false);
   const originalRect = useMemo(() => grid.getRectFromCell(cell), [cell, grid]);
   const rect = useMemo(() => grid.getRectFromCell(modifiedCell), [
     modifiedCell,
@@ -67,10 +71,11 @@ export const RangeBox = React.memo(function RangeBox({
   const isStart = cellIndex === 0;
   const isEnd = cellIndex === cellArray.length - 1;
 
-  const handleStop = useCallback(() => {
+  const handleResizeOrDragEnd = useCallback(() => {
     if (!onChange || disabled) {
       return;
     }
+    setIsResizeOrDrag(false);
 
     onChange(
       calendarEvent.id as string,
@@ -208,11 +213,15 @@ export const RangeBox = React.memo(function RangeBox({
   //   ref,
   // );
 
+  /**
+   * Handles Dragging of an actual event to a different time slot
+   */
   const handleDrag: DraggableEventHandler = useCallback(
     (event, { y, x }) => {
       if (moveAxis === 'none' || disabled) {
         return;
       }
+      setIsResizeOrDrag(true);
 
       event.preventDefault();
       event.stopPropagation();
@@ -259,11 +268,15 @@ export const RangeBox = React.memo(function RangeBox({
     [grid, rect, moveAxis, disabled, cell, setModifiedCell],
   );
 
+  /**
+   *
+   */
   const handleResize: ResizeCallback = useCallback(
     (event, direction, _ref, delta) => {
       if (!isResizable || disabled) {
         return;
       }
+      setIsResizeOrDrag(true);
 
       event.preventDefault();
       event.stopPropagation();
@@ -314,7 +327,7 @@ export const RangeBox = React.memo(function RangeBox({
       return;
     }
 
-    onClick([rangeIndex, cellIndex]);
+    onClick(calendarEvent);
   }, [onClick, rangeIndex, disabled, isActive, cellIndex]);
 
   useMousetrap('enter', handleOnClick, ref);
@@ -342,7 +355,7 @@ export const RangeBox = React.memo(function RangeBox({
       }}
       position={{ x: left, y: top }}
       onDrag={handleDrag}
-      onStop={handleStop}
+      onStop={handleResizeOrDragEnd}
       cancel={cancelClasses}
       disabled={disabled}
     >
@@ -352,9 +365,11 @@ export const RangeBox = React.memo(function RangeBox({
         onFocus={handleOnFocus}
         onClick={handleOnClick}
         handleDelete={handleDelete}
+        setIsEdit={setIsEdit}
+        handleEdit={editEvent}
         cellIndex={cellIndex}
         rangeIndex={rangeIndex}
-        isActive={isActive}
+        isActive={isActive || calendarEvent.id == selectedEventId}
         isEdit={isEdit}
         classes={classes}
         calendarEvent={calendarEvent}
@@ -376,7 +391,7 @@ export const RangeBox = React.memo(function RangeBox({
             originalRect.top
           }.${originalRect.left}`}
           onResize={handleResize}
-          onResizeStop={handleStop}
+          onResizeStop={handleResizeOrDragEnd}
           handleWrapperClass={classes['handle-wrapper']}
           enable={
             isResizable && !disabled
@@ -403,7 +418,7 @@ export const RangeBox = React.memo(function RangeBox({
             classes={classes}
             calendarEvent={calendarEvent}
             isStart={isStart}
-            isEnd={isEnd}
+            isEnd={isResizeOrDrag}
           />
         </Resizable>
       </EventRootComponent>
